@@ -11,40 +11,42 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="login" class="login-shell">
-    <div class="login-card">
-      <div class="brand">HDM Office</div>
-      <div class="muted">hout.decoratie.middennederland</div>
-      <h1>Inloggen</h1>
-      <label>E-mailadres<input id="email" type="email" autocomplete="email" inputmode="email"></label>
-      <label>Wachtwoord<input id="password" type="text" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
-      <button id="loginBtn" class="primary">Inloggen</button>
-      <div id="loginMsg" class="muted"></div>
-    </div>
+<div id="login" class="login-shell"><div class="login-card"><div class="brand">HDM Office</div><div class="muted">hout.decoratie.middennederland</div><h1>Inloggen</h1><label>E-mailadres<input id="email" type="email" autocomplete="email"></label><label>Wachtwoord<input id="password" type="text" autocomplete="off"></label><button id="loginBtn" class="primary">Inloggen</button><div id="loginMsg" class="muted"></div></div></div>
+<div id="app" hidden>
+<header class="topbar"><div><div class="brand">HDM Office</div><div class="muted">hout.decoratie.middennederland</div></div><div id="cloud" class="pill">Cloud</div></header>
+<main class="content">
+<section id="home" class="page active"><h1>Dashboard</h1><div id="dashboard" class="cards"></div></section>
+<section id="customers" class="page">
+  <div class="pagehead"><h1>Klanten</h1><select id="customerMonth"></select></div>
+  <button id="newCustomerBtn" class="secondary">+ Nieuwe klant</button>
+  <div id="customerForm" class="editor" hidden><h2>Nieuwe klant</h2><div class="formgrid"><label>Naam<input id="cName"></label><label>Bestelling<input id="cOrder"></label><label>Leverdatum<input id="cDue" type="date"></label></div><button id="saveCustomerBtn" class="primary">Klant opslaan</button></div>
+  <div class="tablewrap customer-table"><table><thead><tr><th>Naam</th><th>Bestelling</th><th>Leverdatum</th></tr></thead><tbody id="customersBody"></tbody></table></div>
+</section>
+<section id="invoices" class="page">
+  <div class="pagehead"><h1>Facturen</h1><select id="invoiceMonth"></select></div>
+  <button id="newInvoiceBtn" class="secondary">+ Factuur toevoegen</button>
+  <div id="invoiceEditor" class="editor" hidden>
+    <div class="uploadbox"><div class="uploadicon">📄</div><h2>Factuur PDF of foto toevoegen</h2><input id="invoiceFile" type="file" accept="application/pdf,image/*" capture="environment"><p id="invoiceReadStatus" class="muted">Kies een PDF of foto. HDM Office leest zoveel mogelijk automatisch uit.</p></div>
+    <h2>Verkoopfactuur</h2><div class="hint">Controleer de groene velden en druk daarna op <b>Factuur opslaan</b>.</div>
+    <div class="formgrid"><label>Factuurnummer<input id="iNumber" class="readfield"></label><label>Klant<input id="iCustomer" class="readfield"></label><label>Datum<input id="iDate" type="date" class="readfield"></label><label>Omschrijving<input id="iDescription" class="readfield"></label><label>Totaal incl. btw<input id="iTotal" type="number" step="0.01" class="readfield"></label><label>Aanbetaling / betaald<input id="iPaid" type="number" step="0.01" class="readfield" value="0"></label><label>BTW bedrag<input id="iVat" type="number" step="0.01" class="readfield"></label></div>
+    <button id="saveInvoiceBtn" class="primary">Factuur opslaan</button>
   </div>
-
-  <div id="app" hidden>
-    <header class="topbar">
-      <div><div class="brand">HDM Office</div><div class="muted">hout.decoratie.middennederland</div></div>
-      <div id="cloud" class="pill">Cloud</div>
-    </header>
-
-    <main class="content">
-      <section id="home" class="page active"><h1>Dashboard</h1><div id="dashboard" class="cards"></div></section>
-      <section id="customers" class="page"><div class="pagehead"><h1>Klanten</h1><select id="customerMonth"></select></div><div class="tablewrap customer-table"><table><thead><tr><th>Naam</th><th>Bestelling</th><th>Leverdatum</th></tr></thead><tbody id="customersBody"></tbody></table></div></section>
-      <section id="invoices" class="page"><div class="pagehead"><h1>Facturen</h1><select id="invoiceMonth"></select></div><div class="tablewrap"><table><thead><tr><th>Factuur</th><th>Klant</th><th>Datum</th><th>Totaal</th><th>Betaald</th><th>Openstaand</th><th>BTW</th></tr></thead><tbody id="invoicesBody"></tbody></table></div></section>
-      <section id="receipts" class="page"><div class="pagehead"><h1>Bonnen</h1><select id="receiptMonth"></select></div><div class="tablewrap"><table><thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>Totaal</th><th>BTW</th></tr></thead><tbody id="receiptsBody"></tbody></table></div></section>
-      <section id="book" class="page"><h1>Boekhouding</h1><div id="bookCards" class="cards compact"></div><div class="card"><div id="bookText"></div></div></section>
-    </main>
-
-    <nav class="bottomnav">
-      <button data-page="home" class="active">🏠<span>Home</span></button>
-      <button data-page="customers">👥<span>Klanten</span></button>
-      <button data-page="invoices">📄<span>Facturen</span></button>
-      <button data-page="receipts">📷<span>Bonnen</span></button>
-      <button data-page="book">📊<span>Boekhouding</span></button>
-    </nav>
+  <div class="tablewrap"><table><thead><tr><th>Factuur</th><th>Klant</th><th>Datum</th><th>Totaal</th><th>Betaald</th><th>Openstaand</th><th>BTW</th></tr></thead><tbody id="invoicesBody"></tbody></table></div>
+</section>
+<section id="receipts" class="page">
+  <div class="pagehead"><h1>Bonnen</h1><select id="receiptMonth"></select></div>
+  <button id="newReceiptBtn" class="secondary">+ Bon toevoegen</button>
+  <div id="receiptEditor" class="editor" hidden>
+    <div class="uploadbox"><div class="uploadicon">📷</div><h2>Foto of PDF toevoegen</h2><input id="receiptFile" type="file" accept="application/pdf,image/*" capture="environment"><p id="receiptReadStatus" class="muted">Kies een foto, maak direct een foto of selecteer een PDF.</p></div>
+    <h2>Bon / inkoopfactuur</h2><div class="hint">Controleer de groene velden en druk daarna op <b>Bon opslaan</b>.</div>
+    <div class="formgrid"><label>Leverancier<input id="rSupplier" class="readfield"></label><label>Datum<input id="rDate" type="date" class="readfield"></label><label>Categorie<select id="rCategory" class="readfield"><option>Materialen</option><option>Gereedschap en machines</option><option>Kantoor</option><option>Overig</option></select></label><label>Totaal incl. btw<input id="rTotal" type="number" step="0.01" class="readfield"></label><label>BTW bedrag<input id="rVat" type="number" step="0.01" class="readfield"></label><label>Betaalwijze<select id="rMethod" class="readfield"><option>Bank</option><option>Pin</option><option>Contant</option><option>iDEAL</option></select></label></div>
+    <button id="saveReceiptBtn" class="primary">Bon opslaan</button>
   </div>
-  <script type="module" src="app.js"></script>
-</body>
-</html>
+  <div class="tablewrap"><table><thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>Totaal</th><th>BTW</th></tr></thead><tbody id="receiptsBody"></tbody></table></div>
+</section>
+<section id="book" class="page"><h1>Boekhouding</h1><div id="bookCards" class="cards compact"></div><div class="card"><div id="bookText"></div></div></section>
+</main>
+<nav class="bottomnav"><button data-page="home" class="active">🏠<span>Home</span></button><button data-page="customers">👥<span>Klanten</span></button><button data-page="invoices">📄<span>Facturen</span></button><button data-page="receipts">📷<span>Bonnen</span></button><button data-page="book">📊<span>Boekhouding</span></button></nav>
+</div>
+<script type="module" src="app.js"></script>
+</body></html>
