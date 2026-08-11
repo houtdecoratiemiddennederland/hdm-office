@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f7f5f0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="HDM Office">
+  <title>HDM Office Next</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="login" class="login-shell">
+    <div class="login-card">
+      <div class="brand">HDM Office</div>
+      <div class="muted">hout.decoratie.middennederland</div>
+      <h1>Inloggen</h1>
+      <label>E-mailadres<input id="email" type="email" autocomplete="email" inputmode="email"></label>
+      <label>Wachtwoord<input id="password" type="text" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+      <button id="loginBtn" class="primary">Inloggen</button>
+      <div id="loginMsg" class="muted"></div>
+    </div>
+  </div>
+
+  <div id="app" hidden>
+    <header class="topbar">
+      <div><div class="brand">HDM Office</div><div class="muted">hout.decoratie.middennederland</div></div>
+      <div id="cloud" class="pill">Cloud</div>
+    </header>
+
+    <main class="content">
+      <section id="home" class="page active"><h1>Dashboard</h1><div id="dashboard" class="cards"></div></section>
+      <section id="customers" class="page"><div class="pagehead"><h1>Klanten</h1><select id="customerMonth"></select></div><div class="tablewrap"><table><thead><tr><th>Naam</th><th>Maand</th><th>Product</th><th>Prijs</th><th>Aanbetaling</th></tr></thead><tbody id="customersBody"></tbody></table></div></section>
+      <section id="invoices" class="page"><div class="pagehead"><h1>Facturen</h1><select id="invoiceMonth"></select></div><div class="tablewrap"><table><thead><tr><th>Factuur</th><th>Klant</th><th>Datum</th><th>Totaal</th><th>Betaald</th><th>Openstaand</th><th>BTW</th></tr></thead><tbody id="invoicesBody"></tbody></table></div></section>
+      <section id="receipts" class="page"><div class="pagehead"><h1>Bonnen</h1><select id="receiptMonth"></select></div><div class="tablewrap"><table><thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>Totaal</th><th>BTW</th></tr></thead><tbody id="receiptsBody"></tbody></table></div></section>
+      <section id="book" class="page"><h1>Boekhouding</h1><div id="bookCards" class="cards compact"></div><div class="card"><div id="bookText"></div></div></section>
+    </main>
+
+    <nav class="bottomnav">
+      <button data-page="home" class="active">🏠<span>Home</span></button>
+      <button data-page="customers">👥<span>Klanten</span></button>
+      <button data-page="invoices">📄<span>Facturen</span></button>
+      <button data-page="receipts">📷<span>Bonnen</span></button>
+      <button data-page="book">📊<span>Boekhouding</span></button>
+    </nav>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
