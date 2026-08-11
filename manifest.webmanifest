@@ -1,0 +1,10 @@
+{
+  "name": "HDM Office",
+  "short_name": "HDM Office",
+  "description": "Boekhouding voor hout.decoratie.middennederland",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f7f5f0",
+  "theme_color": "#f7f5f0",
+  "orientation": "portrait-primary"
+}
