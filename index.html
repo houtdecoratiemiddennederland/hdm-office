@@ -49,6 +49,20 @@
 <nav class="bottomnav"><button data-page="home" class="active">🏠<span>Home</span></button><button data-page="customers">👥<span>Klanten</span></button><button data-page="invoices">📄<span>Facturen</span></button><button data-page="receipts">📷<span>Bonnen</span></button><button data-page="book">📊<span>Boekhouding</span></button></nav>
 </div>
 <div id="detailModal" class="detail-modal" hidden><div class="detail-sheet"><div class="detail-head"><h2 id="detailTitle">Gegevens bewerken</h2><button id="detailClose" class="icon-btn" type="button">✕</button></div><div id="detailFields" class="formgrid"></div><div class="detail-actions"><button id="detailCancel" class="secondary" type="button">Annuleren</button><button id="detailSave" class="primary" type="button">Wijzigingen opslaan</button></div></div></div>
+<script>
+(()=>{
+  const page=sessionStorage.getItem('hdm-active-page');
+  if(!page)return;
+  sessionStorage.removeItem('hdm-active-page');
+  const target=document.getElementById(page);
+  if(!target)return;
+  const login=document.getElementById('login');
+  if(login)login.hidden=true;
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  target.classList.add('active');
+  document.querySelectorAll('.bottomnav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
+})();
+</script>
 <script type="module" src="app.js"></script>
 <script type="module" src="details.js"></script>
 <script type="module" src="payments.js"></script>
