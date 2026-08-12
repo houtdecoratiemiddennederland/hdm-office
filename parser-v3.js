@@ -3,7 +3,9 @@ const $p=id=>document.getElementById(id);
 const clean=s=>String(s||'').replace(/\r/g,'').replace(/[\u00a0\u202f]/g,' ').replace(/[ \t]+/g,' ').replace(/\n +/g,'\n').trim();
 
 function toMoney(raw){
-  let s=String(raw||'').replace(/\s/g,'').replace(/[€EUR]/gi,'').replace(/[^0-9,.-]/g,'');
+  let s=String(raw||'').trim().replace(/[lI|]/g,'1').replace(/[oO]/g,'0').replace(/[€EUR]/gi,'').trim();
+  if(/^\d+\s+\d{2}$/.test(s))s=s.replace(/^(\d+)\s+(\d{2})$/,'$1,$2');
+  s=s.replace(/\s/g,'').replace(/[^0-9,.-]/g,'');
   if(!s)return'';
   const c=s.lastIndexOf(','),d=s.lastIndexOf('.');
   if(c>=0&&d>=0)s=c>d?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');
@@ -12,17 +14,17 @@ function toMoney(raw){
   const n=Number(s);return Number.isFinite(n)?n.toFixed(2):'';
 }
 
-const MONEY='(?:€\\s*)?(\\d{1,3}(?:[.\\s]\\d{3})*(?:,\\d{2})|\\d+[,.]\\d{2}|\\d+)(?:\\s*€)?';
+const MONEY='(?:€\\s*)?((?:\\d{1,3}(?:[.\\s]\\d{3})+|\\d+)(?:[,.]\\s*[0-9lI|oO]{2})|\\d+\\s+[0-9lI|oO]{2})(?:\\s*€)?';
 function moneyAfter(text,labels){
   const flat=clean(text).replace(/\n/g,' ');
   for(const label of labels){
-    const m=flat.match(new RegExp('(?:'+label+')[^0-9€]{0,45}'+MONEY,'i'));
+    const m=flat.match(new RegExp('(?:'+label+')[^0-9€]{0,55}'+MONEY,'i'));
     if(m){const v=toMoney(m[1]);if(v)return v;}
   }
   return'';
 }
 function moneyValues(text){
-  const out=[];const re=/(?:€\s*)?(\d{1,3}(?:[.\s]\d{3})*,\d{2}|\d+[,.]\d{2})(?:\s*€)?/g;
+  const out=[];const re=/(?:€\s*)?((?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[,.]\s*[0-9lI|oO]{2})|\d+\s+[0-9lI|oO]{2})(?:\s*€)?/g;
   for(const m of clean(text).matchAll(re)){const n=Number(toMoney(m[1]));if(Number.isFinite(n)&&n>0)out.push(n);}
   return out;
 }
@@ -61,7 +63,7 @@ function parseInvoice(text){
   let description=after(lines,['Omschrijving','Beschrijving','Product','Bestelling','Dienst','Artikel']);
   if(description)description=description.replace(/\s+€?\s*\d+[.,]\d{2}.*$/,'').trim();
   const date=dateAfter(t,['Factuurdatum','Datum factuur','Invoice date','Datum']);
-  let total=moneyAfter(t,['Totaal\\s*incl\\.?\\s*btw','Totaalbedrag','Factuurtotaal','Totaal\\s*factuur','Grand\\s*total','Amount\\s*due','Te\\s*betalen','Totaal']);
+  let total=moneyAfter(t,['T[O0]TAAL\\s*incl\\.?\\s*btw','T[O0]TAALBEDRAG','Factuurtotaal','T[O0]TAAL\\s*factuur','Grand\\s*total','Amount\\s*due','Te\\s*betalen','T[O0]TAAL']);
   if(!total){const vals=moneyValues(t).filter(n=>n<100000);if(vals.length)total=Math.max(...vals).toFixed(2);}
   let vat=moneyAfter(t,['Totaal\\s*BTW','BTW(?:\\s*bedrag)?','Omzetbelasting','VAT(?:\\s*amount|\\s*total)?']);
   if(!vat&&total&&/(?:21\s*%\s*(?:btw|vat)|(?:btw|vat)\s*21\s*%)/i.test(t))vat=(Number(total)*21/121).toFixed(2);
@@ -97,22 +99,38 @@ function paymentMethod(t){
   return'Bank';
 }
 function vatFromReceipt(t,total){
-  let vat=moneyAfter(t,['Totaal\\s*BTW','BTW\\s*totaal','BTW(?:\\s*bedrag)','Omzetbelasting','VAT\\s*total','VAT\\s*amount','Tax\\s*total','Tax\\s*amount']);
+  let vat=moneyAfter(t,['T[O0]TAAL\\s*BTW','BTW\\s*totaal','BTW(?:\\s*bedrag)','Omzetbelasting','VAT\\s*total','VAT\\s*amount','Tax\\s*total','Tax\\s*amount']);
   if(vat)return vat;
+  const lines=t.split('\n').map(x=>x.trim()).filter(Boolean);
   let sum=0,count=0;
-  for(const line of t.split('\n')){
-    if(!/(btw|vat|tax)/i.test(line)||!/(21|9|6)\s*%/.test(line))continue;
-    const vals=moneyValues(line);if(vals.length){sum+=vals[vals.length-1];count++;}
+  for(let i=0;i<lines.length;i++){
+    const header=/(btw|vat|tax)/i.test(lines[i]);
+    if(!header)continue;
+    for(let j=i;j<Math.min(lines.length,i+4);j++){
+      const line=lines[j];
+      if(j>i&&/(totaal|total|betaald|te betalen)/i.test(line))break;
+      if(!/(21|9|6)(?:[,.]0+)?\s*%?/i.test(line))continue;
+      const vals=moneyValues(line);
+      if(vals.length){
+        let candidate=vals[vals.length-1];
+        if(/%/.test(line)&&vals.length>1&&Math.abs(candidate-21)<0.01)candidate=vals[vals.length-2];
+        if(candidate>0&&(!total||candidate<Number(total))){sum+=candidate;count++;}
+      }
+    }
+    if(count)break;
   }
   if(count&&sum>0)return sum.toFixed(2);
-  if(total&&/(?:21\s*%\s*(?:btw|vat)|(?:btw|vat)\s*21\s*%)/i.test(t))return(Number(total)*21/121).toFixed(2);
+  if(total&&/(?:21(?:[,.]0+)?\s*%\s*(?:btw|vat)|(?:btw|vat)[^\n]{0,20}21(?:[,.]0+)?\s*%)/i.test(t))return(Number(total)*21/121).toFixed(2);
   return'';
 }
 function parseReceipt(text){
   const t=clean(text),lines=t.split('\n').map(x=>x.trim()).filter(Boolean);
   const supplier=supplierFrom(lines);
   const date=dateAfter(t,['Factuurdatum','Aankoopdatum','Transactiedatum','Orderdatum','Besteldatum','Invoice date','Order date','Transaction date','Datum','Date']);
-  let total=moneyAfter(t,['Totaal\\s*incl\\.?\\s*btw','Totaalbedrag','Factuurtotaal','Ordertotaal','Eindtotaal','Grand\\s*total','Amount\\s*paid','Betaald(?:\\s*bedrag)?','Te\\s*betalen','Total']);
+  let total=moneyAfter(t,['T[O0]TAAL\\s*incl\\.?\\s*btw','T[O0]TAALBEDRAG','Factuurtotaal','Ordertotaal','Eindtotaal','Grand\\s*total','Amount\\s*paid','Betaald(?:\\s*bedrag)?','Te\\s*betalen','T[O0]TAAL','Total']);
+  if(!total){
+    for(const line of lines){if(/(?:t[0o]taal|total|te betalen|betaald)/i.test(line)){const vals=moneyValues(line);if(vals.length){total=Math.max(...vals).toFixed(2);break;}}}
+  }
   if(!total){const vals=moneyValues(t).filter(n=>n<100000);if(vals.length)total=Math.max(...vals).toFixed(2);}
   return{supplier,date,total,vat:vatFromReceipt(t,total),category:receiptCategory(t),method:paymentMethod(t)};
 }
@@ -129,7 +147,10 @@ function pdfRows(items){
 async function ocr(source){
   const {createWorker}=await import('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js');
   const worker=await createWorker('nld+eng');
-  try{const r=await worker.recognize(source);return r.data.text||'';}finally{await worker.terminate();}
+  try{
+    await worker.setParameters({preserve_interword_spaces:'1',tessedit_pageseg_mode:'6'});
+    const r=await worker.recognize(source);return r.data.text||'';
+  }finally{await worker.terminate();}
 }
 
 function isHeicFile(file){return /\.(heic|heif)$/i.test(file.name||'')||/^image\/hei[cf]$/i.test(file.type||'');}
@@ -148,20 +169,35 @@ async function getHeicTo(){
 async function imageForOcr(file){
   if(!isHeicFile(file))return file;
   const HeicTo=await getHeicTo();
-  const converted=await HeicTo({blob:file,type:'image/jpeg',quality:0.92});
+  const converted=await HeicTo({blob:file,type:'image/jpeg',quality:0.96});
   return Array.isArray(converted)?converted[0]:converted;
+}
+async function sourceToCanvas(source){
+  const url=URL.createObjectURL(source),img=new Image();
+  try{
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
+    const naturalW=img.naturalWidth||img.width,naturalH=img.naturalHeight||img.height;
+    const targetW=Math.min(2800,Math.max(1800,naturalW*1.7));
+    const scale=targetW/naturalW;
+    const canvas=document.createElement('canvas');canvas.width=Math.round(naturalW*scale);canvas.height=Math.round(naturalH*scale);
+    const ctx=canvas.getContext('2d',{willReadFrequently:false});
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.filter='grayscale(1) contrast(1.75) brightness(1.08)';
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);ctx.filter='none';
+    return canvas;
+  }finally{URL.revokeObjectURL(url);}
 }
 async function readDoc(file){
   if(!(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf'))){
-    const source=await imageForOcr(file);
-    return ocr(source);
+    const source=await imageForOcr(file),canvas=await sourceToCanvas(source);
+    return ocr(canvas);
   }
   const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
   const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;let text='';
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p),c=await page.getTextContent();let pageText=pdfRows(c.items);
-    if(pageText.replace(/\s/g,'').length<20){const vp=page.getViewport({scale:1.8}),canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;pageText=await ocr(canvas);}
+    if(pageText.replace(/\s/g,'').length<20){const vp=page.getViewport({scale:2}),canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);const ctx=canvas.getContext('2d');ctx.filter='grayscale(1) contrast(1.6)';await page.render({canvasContext:ctx,viewport:vp}).promise;ctx.filter='none';pageText=await ocr(canvas);}
     text+=pageText+'\n';
   }
   return text;
@@ -194,6 +230,6 @@ function statusFor(p,receipt=false){
 document.addEventListener('change',event=>{
   const input=event.target;if(!(input instanceof HTMLInputElement)||!input.files?.[0])return;
   const file=input.files[0];
-  if(input.id==='invoiceFile')setTimeout(async()=>{const s=$p('invoiceReadStatus');try{if(s)s.textContent=isHeicFile(file)?'HEIC-foto omzetten en factuur uitlezen…':'Factuur extra nauwkeurig uitlezen…';const p=parseInvoice(await readDoc(file));applyInvoice(p);if(s)s.textContent=statusFor(p,false);}catch(e){console.error(e);if(s)s.textContent='Niet alle factuurgegevens konden automatisch worden herkend. Controleer de groene velden.';}},250);
-  if(input.id==='receiptFile')setTimeout(async()=>{const s=$p('receiptReadStatus');try{if(s)s.textContent=isHeicFile(file)?'HEIC-foto omzetten en bon uitlezen…':'Bon extra nauwkeurig uitlezen…';const text=await readDoc(file);const p=parseReceipt(text);if(!p.supplier)p.supplier=filenameSupplier(file);if(!p.date)p.date=filenameDate(file);if(p.supplier&&!p.category)p.category=receiptCategory(p.supplier);applyReceipt(p);if(s)s.textContent=statusFor(p,true);}catch(e){console.error(e);const fallback={supplier:filenameSupplier(file),date:filenameDate(file),total:'',vat:'',category:receiptCategory(file.name||''),method:'Bank'};applyReceipt(fallback);if(s)s.textContent='De foto kon niet volledig worden uitgelezen. Leverancier/datum uit de bestandsnaam zijn waar mogelijk alvast ingevuld.';}},250);
+  if(input.id==='invoiceFile')setTimeout(async()=>{const s=$p('invoiceReadStatus');try{if(s)s.textContent=isHeicFile(file)?'HEIC-foto voorbereiden en factuur uitlezen…':'Factuur extra nauwkeurig uitlezen…';const p=parseInvoice(await readDoc(file));applyInvoice(p);if(s)s.textContent=statusFor(p,false);}catch(e){console.error(e);if(s)s.textContent='Niet alle factuurgegevens konden automatisch worden herkend. Controleer de groene velden.';}},250);
+  if(input.id==='receiptFile')setTimeout(async()=>{const s=$p('receiptReadStatus');try{if(s)s.textContent=isHeicFile(file)?'HEIC-foto verscherpen en bonbedragen uitlezen…':'Bon verscherpen en bedragen uitlezen…';const text=await readDoc(file);const p=parseReceipt(text);if(!p.supplier)p.supplier=filenameSupplier(file);if(!p.date)p.date=filenameDate(file);if(p.supplier&&!p.category)p.category=receiptCategory(p.supplier);applyReceipt(p);if(s)s.textContent=statusFor(p,true);}catch(e){console.error(e);const fallback={supplier:filenameSupplier(file),date:filenameDate(file),total:'',vat:'',category:receiptCategory(file.name||''),method:'Bank'};applyReceipt(fallback);if(s)s.textContent='De foto kon niet volledig worden uitgelezen. Leverancier/datum uit de bestandsnaam zijn waar mogelijk alvast ingevuld.';}},250);
 });
