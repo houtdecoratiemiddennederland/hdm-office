@@ -32,7 +32,7 @@ function pNumber(text,lines){const flat=pClean(text).replace(/\n/g,' '),patterns
 function pCustomer(lines,text){let v=pAfter(lines,['Factuuradres','Klant(?:naam)?','Debiteur','Gefactureerd aan','Factuur aan','Bill to']);if(v)return v.replace(/^[:#-]\s*/,'').trim();const flat=pClean(text).replace(/\n/g,' '),m=flat.match(/(?:factuuradres|klant(?:naam)?|debiteur|gefactureerd aan|factuur aan|bill to)\s*[:#-]?\s*([A-ZÀ-ÿ0-9][A-ZÀ-ÿ0-9 &'().-]{2,60}?)(?=\s+(?:[A-Z]{0,2}\d{4}\s?[A-Z]{2}|\d{1,5}\s+[A-Za-zÀ-ÿ]|kvk|btw|datum|factuur|omschrijving|totaal)|$)/i);return m?m[1].trim():''}
 function pDescription(lines,text){let v=pAfter(lines,['Omschrijving','Beschrijving','Product(?:\\s*\\/\\s*bestelling)?','Bestelling','Dienst','Artikel']);if(v){v=v.replace(/\s+(?:€?\s*\d+[.,]\d{2}).*$/,'').trim();if(v.length>2)return v}const flat=pClean(text).replace(/\n/g,' '),m=flat.match(/(?:omschrijving|beschrijving|product|bestelling|dienst|artikel)\s*[:#-]?\s*([A-ZÀ-ÿ0-9][A-ZÀ-ÿ0-9 ,&+()./'-]{3,90}?)(?=\s+(?:aantal|prijs|bedrag|subtotaal|totaal|btw|€\s*\d)|$)/i);return m?m[1].trim():''}
 function pParse(text){
-  const clean=pClean(text),lines=clean.split('\n').map(x=>x.trim()).filter(Boolean);
+  const clean=pClean(text),lines=clean.split('\n').map(x=>x.trim()).filter(Boolean;
   const date=pFindDate(clean,['Factuurdatum','Datum factuur','Datum']);
   let vat=pFindMoney(clean,['BTW(?:\\s*bedrag)?','BTW\\s*21\\s*%','21\\s*%\\s*BTW','Omzetbelasting','VAT(?:\\s*amount)?']);
   let total=pFindMoney(clean,['Totaal\\s*incl\\.?\\s*btw','Totaalbedrag','Factuurtotaal','Totaal\\s*factuur','Te\\s*betalen','Totaal']);
@@ -47,14 +47,73 @@ function pPdfLines(items){const rows=[];for(const item of items||[]){const str=S
 async function pRead(file){
   let text='';
   if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;for(let p=1;p<=pdf.numPages;p++){const page=await pdf.getPage(p),c=await page.getTextContent();text+=pPdfLines(c.items)+'\n'}}
-  else{const{createWorker}=await import('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js');const worker=await createWorker('nld');const r=await worker.recognize(file);text=r.data.text||'';await worker.terminate()}
+  else{const{createWorker}=await import('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js');const worker=await createWorker('nld+eng');const r=await worker.recognize(file);text=r.data.text||'';await worker.terminate()}
   return text;
 }
 function pApply(parsed){pEl('iNumber').value=parsed.number||'';pEl('iCustomer').value=parsed.customer||'';pEl('iDate').value=parsed.date||'';pEl('iDescription').value=parsed.description||'';pEl('iTotal').value=parsed.total||'';pEl('iPaid').value=parsed.paid||'0';pEl('iVat').value=parsed.vat||''}
 function pStatus(parsed){const fields={number:'factuurnummer',customer:'klant',date:'datum',description:'omschrijving',total:'totaal',paid:'aanbetaling',vat:'btw'},found=[],missing=[];for(const[k,label]of Object.entries(fields)){const v=parsed[k];if(v!==''&&v!=null&&(k!=='paid'||Number(v)>0))found.push(label);else missing.push(label)}return missing.length?`Extra controle klaar. Herkend: ${found.join(', ')||'beperkte gegevens'}. Controleer/vul nog in: ${missing.join(', ')}.`:'Alles herkend. Controleer de groene velden en sla daarna op.'}
 
+function rSupplier(lines,text){
+  const labeled=pAfter(lines,['Leverancier','Verkoper','Winkel','Supplier','Seller','Merchant']);
+  if(labeled)return labeled.trim();
+  const skip=/^(factuur|invoice|bon|receipt|kwitantie|order|bestelling|datum|date|klant|customer|adres|address|telefoon|phone|www\.|https?:|kvk|btw|vat|iban|transactie|transaction|totaal|subtotal|subtotaal|bedankt)/i;
+  for(const line of lines.slice(0,12)){
+    const s=line.replace(/^[^A-Za-zÀ-ÿ0-9]+/,'').trim();
+    if(!s||s.length<3||s.length>80||skip.test(s))continue;
+    if(/^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}/.test(s)||/^20\d{2}[-/.]/.test(s))continue;
+    if(/^[€\d.,\s-]+$/.test(s))continue;
+    return s;
+  }
+  return'';
+}
+function rCategory(text){
+  const s=pClean(text).toLowerCase();
+  if(/(gereedschap|machine|boor|zaag|schuurmachine|laser|compressor|frees|tool|drill|saw|hardware tool)/i.test(s))return'Gereedschap en machines';
+  if(/(papier|printer|inkt|toner|bureau|kantoor|office|pen\b|envelop|etiket|label)/i.test(s))return'Kantoor';
+  if(/(hout|mdf|multiplex|acryl|plexiglas|verf|lak|primer|schroef|lijm|kit|plaatmateriaal|bouwmarkt|gamma|praxis|karwei|hornbach|materiaal)/i.test(s))return'Materialen';
+  return'Overig';
+}
+function rMethod(text){
+  const s=pClean(text).toLowerCase();
+  if(/\bideal\b|i-deal/.test(s))return'iDEAL';
+  if(/\bcontant\b|\bcash\b/.test(s))return'Contant';
+  if(/\bpin\b|maestro|mastercard|visa|debit|credit card|kaartbetaling|card payment/.test(s))return'Pin';
+  if(/bankoverschrijving|overschrijving|bank transfer|sepa|iban/.test(s))return'Bank';
+  return'Bank';
+}
+function rParse(text){
+  const clean=pClean(text),lines=clean.split('\n').map(x=>x.trim()).filter(Boolean);
+  const supplier=rSupplier(lines,clean);
+  const date=pFindDate(clean,['Factuurdatum','Aankoopdatum','Transactiedatum','Orderdatum','Besteldatum','Datum','Date','Invoice date','Order date','Transaction date']);
+  let total=pFindMoney(clean,['Totaal\\s*incl\\.?\\s*btw','Totaalbedrag','Factuurtotaal','Ordertotaal','Eindtotaal','Grand\\s*total','Amount\\s*paid','Betaald(?:\\s*bedrag)?','Te\\s*betalen','Total']);
+  if(!total){const amounts=pFindAllMoney(clean).filter(n=>n>0&&n<100000);if(amounts.length)total=Math.max(...amounts).toFixed(2)}
+  let vat=pFindMoney(clean,['BTW(?:\\s*bedrag|\\s*totaal)?','Totaal\\s*BTW','Omzetbelasting','VAT(?:\\s*amount|\\s*total)?','Tax(?:\\s*amount|\\s*total)?','21\\s*%\\s*BTW','BTW\\s*21\\s*%']);
+  if(!vat&&total&&/(?:21\s*%\s*(?:btw|vat)|(?:btw|vat)\s*21\s*%)/i.test(clean))vat=(Number(total)*21/121).toFixed(2);
+  return{supplier,date,total,vat,category:rCategory(clean),method:rMethod(clean)};
+}
+function rApply(parsed){
+  if(pEl('rSupplier'))pEl('rSupplier').value=parsed.supplier||'';
+  if(pEl('rDate'))pEl('rDate').value=parsed.date||'';
+  if(pEl('rTotal'))pEl('rTotal').value=parsed.total||'';
+  if(pEl('rVat'))pEl('rVat').value=parsed.vat||'';
+  if(pEl('rCategory')&&parsed.category)pEl('rCategory').value=parsed.category;
+  if(pEl('rMethod')&&parsed.method)pEl('rMethod').value=parsed.method;
+}
+function rStatus(parsed){
+  const fields={supplier:'leverancier',date:'datum',total:'totaal',vat:'btw',category:'categorie',method:'betaalwijze'},found=[],missing=[];
+  for(const[k,label]of Object.entries(fields)){const v=parsed[k];if(v!==''&&v!=null)found.push(label);else missing.push(label)}
+  return missing.length?`Bon extra gecontroleerd. Herkend: ${found.join(', ')||'beperkte gegevens'}. Controleer/vul nog in: ${missing.join(', ')}.`:'Alle bongegevens herkend. Controleer de groene velden en sla daarna op.';
+}
+
 document.addEventListener('change',event=>{
-  const input=event.target;if(!(input instanceof HTMLInputElement)||input.id!=='invoiceFile'||!input.files?.[0])return;
-  const file=input.files[0],status=pEl('invoiceReadStatus');
-  setTimeout(async()=>{try{if(status)status.textContent='Factuur extra nauwkeurig uitlezen…';const text=await pRead(file),parsed=pParse(text);pApply(parsed);if(status)status.textContent=pStatus(parsed)}catch(e){console.error('Invoice parser v2',e);if(status)status.textContent='Bestand is gelezen, maar niet alle velden konden automatisch worden herkend. Controleer de groene velden.'}},300);
+  const input=event.target;if(!(input instanceof HTMLInputElement)||!input.files?.[0])return;
+  const file=input.files[0];
+  if(input.id==='invoiceFile'){
+    const status=pEl('invoiceReadStatus');
+    setTimeout(async()=>{try{if(status)status.textContent='Factuur extra nauwkeurig uitlezen…';const text=await pRead(file),parsed=pParse(text);pApply(parsed);if(status)status.textContent=pStatus(parsed)}catch(e){console.error('Invoice parser v2',e);if(status)status.textContent='Bestand is gelezen, maar niet alle velden konden automatisch worden herkend. Controleer de groene velden.'}},300);
+  }
+  if(input.id==='receiptFile'){
+    const status=pEl('receiptReadStatus');
+    setTimeout(async()=>{try{if(status)status.textContent='Bon extra nauwkeurig uitlezen…';const text=await pRead(file),parsed=rParse(text);rApply(parsed);if(status)status.textContent=rStatus(parsed)}catch(e){console.error('Receipt parser v2',e);if(status)status.textContent='Bon is gelezen, maar niet alle velden konden automatisch worden herkend. Controleer de groene velden.'}},300);
+  }
 });
