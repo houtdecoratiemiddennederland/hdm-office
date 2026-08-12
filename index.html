@@ -37,7 +37,7 @@
   <div class="pagehead"><h1>Bonnen</h1><select id="receiptMonth"></select></div>
   <button id="newReceiptBtn" class="secondary">+ Bon toevoegen</button>
   <div id="receiptEditor" class="editor" hidden>
-    <div class="uploadbox"><div class="uploadicon">📷</div><h2>Foto of PDF toevoegen</h2><input id="receiptFile" type="file" accept="application/pdf,image/*" capture="environment"><p id="receiptReadStatus" class="muted">Kies een foto, maak direct een foto of selecteer een PDF.</p></div>
+    <div class="uploadbox"><div class="uploadicon">📷</div><h2>Bon PDF, bestand of foto toevoegen</h2><input id="receiptFile" type="file" accept="application/pdf,.pdf,image/*"><p id="receiptReadStatus" class="muted">Tik op ‘Kies bestand’. Op iPhone kun je een PDF uit Bestanden kiezen, een bestaande foto selecteren of een foto maken.</p></div>
     <h2>Bon / inkoopfactuur</h2><div class="hint">Controleer de groene velden en druk daarna op <b>Bon opslaan</b>.</div>
     <div class="formgrid"><label>Leverancier<input id="rSupplier" class="readfield"></label><label>Datum<input id="rDate" type="date" class="readfield"></label><label>Categorie<select id="rCategory" class="readfield"><option>Materialen</option><option>Gereedschap en machines</option><option>Kantoor</option><option>Overig</option></select></label><label>Totaal incl. btw<input id="rTotal" type="number" step="0.01" class="readfield"></label><label>BTW bedrag<input id="rVat" type="number" step="0.01" class="readfield"></label><label>Betaalwijze<select id="rMethod" class="readfield"><option>Bank</option><option>Pin</option><option>Contant</option><option>iDEAL</option></select></label></div>
     <button id="saveReceiptBtn" class="primary">Bon opslaan</button>
