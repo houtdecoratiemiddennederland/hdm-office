@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HDM Bonnen Test</title>
+<style>
+:root{--bg:#f7f5f0;--card:#fff;--line:#e7dece;--gold:#be8f2f;--green:#eaf7e9;--text:#24211d;--muted:#746f68}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:18px 14px 50px}.wrap{max-width:720px;margin:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:0 8px 28px #4a35100d}h1{font-size:28px;margin:4px 0 8px}h2{font-size:20px;margin:0 0 12px}.muted{color:var(--muted);font-size:14px;line-height:1.45}.upload{border:2px dashed #d4b76e;border-radius:18px;padding:24px 14px;text-align:center;background:#fffaf0}.upload input{width:100%;font-size:16px}.status{margin-top:12px;padding:12px;border-radius:12px;background:#f5ecd9;font-size:14px;line-height:1.4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{background:var(--green);border:1px solid var(--line);border-radius:14px;padding:12px}.field small{display:block;color:var(--muted);margin-bottom:5px}.field strong{font-size:21px;word-break:break-word}.wide{grid-column:1/-1}canvas{width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:#eee}details{margin-top:12px}pre{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.35;background:#f6f4ef;padding:12px;border-radius:12px;max-height:330px;overflow:auto}.ok{background:#e5f5e7}.bad{background:#ffe7e2}@media(max-width:520px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}body{padding:12px 10px 40px}.card{padding:15px;border-radius:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Bonnen uitlezen — test</h1>
+    <p class="muted">Deze pagina staat los van HDM Office. Er wordt <b>niets opgeslagen</b>. Upload hier dezelfde bon. Pas als dit goed werkt, zetten we deze uitlezing terug in de app.</p>
+  </div>
+
+  <div class="card">
+    <div class="upload">
+      <h2>📷 Kies bonfoto / HEIC / JPG / PNG</h2>
+      <input id="file" type="file" accept="image/*,.heic,.heif">
+      <div id="status" class="status">Nog geen bestand gekozen.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Herkende gegevens</h2>
+    <div class="grid">
+      <div class="field"><small>Leverancier</small><strong id="supplier">—</strong></div>
+      <div class="field"><small>Datum</small><strong id="date">—</strong></div>
+      <div class="field"><small>Totaal incl. btw</small><strong id="total">—</strong></div>
+      <div class="field"><small>BTW totaal</small><strong id="vat">—</strong></div>
+      <div class="field wide"><small>Betaalwijze</small><strong id="method">—</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Wat de OCR bekijkt</h2>
+    <canvas id="preview"></canvas>
+    <details><summary>OCR-tekst tonen</summary><pre id="raw">Nog niets uitgelezen.</pre></details>
+  </div>
+</div>
+<script type="module">
+const $=id=>document.getElementById(id);
+const money=v=>Number(v).toLocaleString('nl-NL',{style:'currency',currency:'EUR'});
+
+function normText(s){return String(s||'').replace(/\r/g,'').replace(/[\u00a0\u202f]/g,' ').replace(/[|]/g,'1').replace(/(\d)[oO](?=\d)/g,'$10').replace(/(\d)[lI](?=\d|\b)/g,'$11');}
+function toNum(s){
+  s=String(s||'').replace(/[€EUR\s]/gi,'').replace(/[^0-9,.-]/g,'');
+  if(!s)return NaN; const c=s.lastIndexOf(','),d=s.lastIndexOf('.');
+  if(c>=0&&d>=0)s=c>d?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');
+  else if(c>=0)s=s.replace(/\./g,'').replace(',','.');
+  return Number(s);
+}
+function amounts(line){
+  const s=normText(line).replace(/(\d{1,5})\s+(\d{2})(?!\d)/g,'$1,$2');
+  const out=[]; for(const m of s.matchAll(/(?:€\s*)?(\d{1,5}(?:[.,]\d{2}))(?:\s*(?:€|EUR))?/gi)){const n=toNum(m[1]);if(Number.isFinite(n)&&n>=0&&n<10000)out.push(n);} return out;
+}
+function filenameSupplier(file){return String(file?.name||'').replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b(?:januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\b.*$/i,'').replace(/\b\d{1,2}\b.*$/,'').trim();}
+function parseDate(text){
+  const t=normText(text); let m=t.match(/(?:datum\s*[:.-]?\s*)?(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})/i); if(!m)m=t.match(/\bdd\.?\s*(\d{1,2})-(\d{1,2})-(20\d{2})/i); if(!m)return''; const [_,d,mo,y]=m; return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function parseSupplier(text,file){const t=normText(text); if(/\bGAMMA\b/i.test(t))return'Gamma'; if(/\bPRAXIS\b/i.test(t))return'Praxis'; if(/\bKARWEI\b/i.test(t))return'Karwei'; if(/\bHORNBACH\b/i.test(t))return'Hornbach'; return filenameSupplier(file)||'';}
+function parseMethod(text){const t=normText(text); if(/maestro|mastercard|visa|pin|kaart|debit|contactless/i.test(t))return'Pin'; if(/contant|cash/i.test(t))return'Contant'; if(/ideal|i-deal/i.test(t))return'iDEAL'; return'Bank';}
+function parseTotal(text){
+  const lines=normText(text).split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  const strong=[];
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i];
+    if(/\b(?:9\s*)?t[o0]taal\b|tot\.?\s*omzet|eindt[o0]taal|te\s*betalen/i.test(line)){
+      const vals=amounts(line+' '+(lines[i+1]||''));
+      for(const v of vals)if(v>0)strong.push(v);
+    }
+  }
+  if(strong.length){const freq=new Map();strong.forEach(v=>freq.set(v,(freq.get(v)||0)+1));return [...freq.entries()].sort((a,b)=>b[1]-a[1]||b[0]-a[0])[0][0];}
+  const all=[];for(const l of lines){if(/btw|vat|tax|%/i.test(l))continue;all.push(...amounts(l).filter(v=>v>0));}return all.length?Math.max(...all):NaN;
+}
+function parseVat(text,total){
+  const lines=normText(text).split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  // Hoogste prioriteit: expliciete TOT.BTW-regel.
+  for(let i=0;i<lines.length;i++){
+    if(/tot\.?\s*btw|t[o0]t\.?\s*btw/i.test(lines[i])){const vals=amounts(lines[i]+' '+(lines[i+1]||''));const good=vals.filter(v=>v>0&&(!Number.isFinite(total)||v<total));if(good.length)return good[good.length-1];}
+  }
+  // Gamma-opbouw: BTW 21,00 % over 38,03 = 7,99 / BTW 9,00 % ... = 0,08
+  const parts=[];
+  for(const l of lines){
+    if(!/btw/i.test(l)||!/%/.test(l))continue;
+    const vals=amounts(l); if(vals.length){const last=vals[vals.length-1]; if(last>0&&(!Number.isFinite(total)||last<total*.5))parts.push(last);}
+  }
+  if(parts.length>=2)return parts.reduce((a,b)=>a+b,0);
+  if(parts.length===1)return parts[0];
+  return NaN;
+}
+
+async function loadScript(src,test){if(test())return;await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}
+async function heicToJpeg(file){
+  await loadScript('https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js',()=>!!window.HeicTo);
+  const out=await window.HeicTo({blob:file,type:'image/jpeg',quality:.98}); return Array.isArray(out)?out[0]:out;
+}
+async function imageFromFile(file){
+  let blob=file;
+  const tryLoad=async b=>{const url=URL.createObjectURL(b);try{const img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url});return img;}finally{setTimeout(()=>URL.revokeObjectURL(url),2000);}};
+  try{return await tryLoad(blob);}catch(e){if(!/\.hei[cf]$/i.test(file.name||'')&&!/^image\/hei[cf]$/i.test(file.type||''))throw e;blob=await heicToJpeg(file);return tryLoad(blob);}
+}
+function drawReceiptCrop(img){
+  const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+  // Bij kassabonfoto's staat de bon vrijwel altijd centraal. We snijden vooral de achtergrond weg.
+  const sx=Math.round(iw*.20), sy=Math.round(ih*.025), sw=Math.round(iw*.60), sh=Math.round(ih*.95);
+  const scale=Math.min(2.2,1900/sw); const c=$('preview'); c.width=Math.max(1,Math.round(sw*scale)); c.height=Math.max(1,Math.round(sh*scale));
+  const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);return c;
+}
+function enhancedCanvas(src,mode){
+  const c=document.createElement('canvas');c.width=src.width;c.height=src.height;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;
+  for(let i=0;i<d.length;i+=4){let g=.299*d[i]+.587*d[i+1]+.114*d[i+2]; if(mode==='bw')g=g>172?255:0; else g=Math.max(0,Math.min(255,(g-128)*1.7+128));d[i]=d[i+1]=d[i+2]=g;}ctx.putImageData(im,0,0);return c;
+}
+function crop(src,y0,y1){const c=document.createElement('canvas');const y=Math.round(src.height*y0),h=Math.max(1,Math.round(src.height*(y1-y0)));c.width=src.width;c.height=h;c.getContext('2d').drawImage(src,0,y,src.width,h,0,0,src.width,h);return c;}
+async function runOcr(canvases){
+  const {createWorker}=await import('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js'); const worker=await createWorker('nld+eng');
+  try{await worker.setParameters({preserve_interword_spaces:'1'});const texts=[];for(let i=0;i<canvases.length;i++){ $('status').textContent=`Uitlezen… stap ${i+1} van ${canvases.length}`;const r=await worker.recognize(canvases[i]);texts.push(r.data.text||'');}return texts.join('\n--- VOLGENDE OCR PASS ---\n');}finally{await worker.terminate();}
+}
+
+$('file').addEventListener('change',async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  $('status').className='status';$('status').textContent='Foto voorbereiden…';['supplier','date','total','vat','method'].forEach(id=>$(id).textContent='…');$('raw').textContent='Bezig met uitlezen…';
+  try{
+    const img=await imageFromFile(file),base=drawReceiptCrop(img),gray=enhancedCanvas(base,'gray'),bw=enhancedCanvas(base,'bw');
+    // Volledige bon + midden/ondergedeelte waar bij Gamma totaal/BTW staat.
+    const text=await runOcr([gray,crop(gray,.25,.72),crop(bw,.25,.72),crop(gray,.42,.82)]);
+    const supplier=parseSupplier(text,file),date=parseDate(text),total=parseTotal(text),vat=parseVat(text,total),method=parseMethod(text);
+    $('supplier').textContent=supplier||'Niet herkend';$('date').textContent=date?new Date(date+'T12:00:00').toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}):'Niet herkend';$('total').textContent=Number.isFinite(total)?money(total):'Niet herkend';$('vat').textContent=Number.isFinite(vat)?money(vat):'Niet herkend';$('method').textContent=method;$('raw').textContent=text;
+    const ok=Number.isFinite(total)&&Number.isFinite(vat);$('status').className='status '+(ok?'ok':'bad');$('status').textContent=ok?`Gelukt: totaal ${money(total)} en btw ${money(vat)} gevonden. Dit is nog alleen de HTML-test; er is niets opgeslagen.`:'Nog niet volledig gelukt. Open onderaan “OCR-tekst tonen”; dan kunnen we exact zien wat de browser uit deze bon leest.';
+  }catch(err){console.error(err);$('status').className='status bad';$('status').textContent='Uitlezen mislukt: '+(err?.message||err);$('raw').textContent=String(err?.stack||err);}
+});
+</script>
+</body>
+</html>
