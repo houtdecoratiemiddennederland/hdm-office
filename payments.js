@@ -63,8 +63,8 @@ async function markPaid(row,button){
     }
     state.payments.push({id:id(),invoiceId:invoice.id,amount:remaining,type:'Betaling',date:today(),source:'Facturen · Betaald-knop'});
     await saveState(user,state);
-    button.textContent='Betaald ✓';button.classList.add('paid-done');
-    setTimeout(()=>location.reload(),350);
+    button.textContent='Betaald ✓';button.classList.add('paid-done');button.disabled=true;
+    window.dispatchEvent(new CustomEvent('hdm:payment-saved',{detail:{invoiceId:invoice.id}}));
   }catch(e){
     console.error(e);alert('Betaling verwerken lukt niet: '+String(e?.message||e));button.disabled=false;button.textContent='Betaald';
   }
