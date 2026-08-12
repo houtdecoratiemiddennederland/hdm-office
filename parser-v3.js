@@ -131,8 +131,31 @@ async function ocr(source){
   const worker=await createWorker('nld+eng');
   try{const r=await worker.recognize(source);return r.data.text||'';}finally{await worker.terminate();}
 }
+
+function isHeicFile(file){return /\.(heic|heif)$/i.test(file.name||'')||/^image\/hei[cf]$/i.test(file.type||'');}
+let heicLoader=null;
+async function getHeicTo(){
+  if(window.HeicTo)return window.HeicTo;
+  if(!heicLoader)heicLoader=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js';
+    s.onload=()=>window.HeicTo?resolve(window.HeicTo):reject(new Error('HEIC-converter niet geladen'));
+    s.onerror=()=>reject(new Error('HEIC-converter kon niet worden geladen'));
+    document.head.appendChild(s);
+  });
+  return heicLoader;
+}
+async function imageForOcr(file){
+  if(!isHeicFile(file))return file;
+  const HeicTo=await getHeicTo();
+  const converted=await HeicTo({blob:file,type:'image/jpeg',quality:0.92});
+  return Array.isArray(converted)?converted[0]:converted;
+}
 async function readDoc(file){
-  if(!(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')))return ocr(file);
+  if(!(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf'))){
+    const source=await imageForOcr(file);
+    return ocr(source);
+  }
   const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
   const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;let text='';
@@ -142,6 +165,22 @@ async function readDoc(file){
     text+=pageText+'\n';
   }
   return text;
+}
+
+function filenameSupplier(file){
+  const base=String(file?.name||'').replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim();
+  if(!base)return'';
+  const monthWords='januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|sept|okt|nov|dec';
+  return base.replace(new RegExp('\\b(?:'+monthWords+')\\b.*$','i'),'').replace(/\b20\d{2}\b.*$/,'').replace(/\b\d{1,2}\b.*$/,'').trim();
+}
+function filenameDate(file){
+  const name=String(file?.name||'').replace(/\.[^.]+$/,'');
+  const m=name.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|sept|okt|nov|dec)(?:\s+(20\d{2}))?/i)||name.match(/(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|sept|okt|nov|dec)\s+(\d{1,2})(?:\s+(20\d{2}))?/i);
+  if(!m)return'';
+  let day,monthName,year;
+  if(/^\d/.test(m[1])){day=m[1];monthName=m[2];year=m[3];}else{monthName=m[1];day=m[2];year=m[3];}
+  const fallbackYear=new Date(file?.lastModified||Date.now()).getFullYear();
+  return dateParts(year||fallbackYear,months[monthName.toLowerCase()],day);
 }
 
 function applyInvoice(p){$p('iNumber').value=p.number||'';$p('iCustomer').value=p.customer||'';$p('iDate').value=p.date||'';$p('iDescription').value=p.description||'';$p('iTotal').value=p.total||'';$p('iPaid').value=p.paid||'0';$p('iVat').value=p.vat||'';}
@@ -155,6 +194,6 @@ function statusFor(p,receipt=false){
 document.addEventListener('change',event=>{
   const input=event.target;if(!(input instanceof HTMLInputElement)||!input.files?.[0])return;
   const file=input.files[0];
-  if(input.id==='invoiceFile')setTimeout(async()=>{const s=$p('invoiceReadStatus');try{if(s)s.textContent='Factuur extra nauwkeurig uitlezen…';const p=parseInvoice(await readDoc(file));applyInvoice(p);if(s)s.textContent=statusFor(p,false);}catch(e){console.error(e);if(s)s.textContent='Niet alle factuurgegevens konden automatisch worden herkend. Controleer de groene velden.';}},250);
-  if(input.id==='receiptFile')setTimeout(async()=>{const s=$p('receiptReadStatus');try{if(s)s.textContent='Bon extra nauwkeurig uitlezen…';const p=parseReceipt(await readDoc(file));applyReceipt(p);if(s)s.textContent=statusFor(p,true);}catch(e){console.error(e);if(s)s.textContent='Niet alle bongegevens konden automatisch worden herkend. Controleer de groene velden.';}},250);
+  if(input.id==='invoiceFile')setTimeout(async()=>{const s=$p('invoiceReadStatus');try{if(s)s.textContent=isHeicFile(file)?'HEIC-foto omzetten en factuur uitlezen…':'Factuur extra nauwkeurig uitlezen…';const p=parseInvoice(await readDoc(file));applyInvoice(p);if(s)s.textContent=statusFor(p,false);}catch(e){console.error(e);if(s)s.textContent='Niet alle factuurgegevens konden automatisch worden herkend. Controleer de groene velden.';}},250);
+  if(input.id==='receiptFile')setTimeout(async()=>{const s=$p('receiptReadStatus');try{if(s)s.textContent=isHeicFile(file)?'HEIC-foto omzetten en bon uitlezen…':'Bon extra nauwkeurig uitlezen…';const text=await readDoc(file);const p=parseReceipt(text);if(!p.supplier)p.supplier=filenameSupplier(file);if(!p.date)p.date=filenameDate(file);if(p.supplier&&!p.category)p.category=receiptCategory(p.supplier);applyReceipt(p);if(s)s.textContent=statusFor(p,true);}catch(e){console.error(e);const fallback={supplier:filenameSupplier(file),date:filenameDate(file),total:'',vat:'',category:receiptCategory(file.name||''),method:'Bank'};applyReceipt(fallback);if(s)s.textContent='De foto kon niet volledig worden uitgelezen. Leverancier/datum uit de bestandsnaam zijn waar mogelijk alvast ingevuld.';}},250);
 });
