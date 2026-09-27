@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="HDM Office">
   <title>HDM Office Next</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20260924-2055">
+  <link rel="stylesheet" href="styles.css?v=20260927-1305">
 </head>
 <body>
 <div id="login" class="login-shell"><div class="login-card"><div class="brand">HDM Office</div><div class="muted">hout.decoratie.middennederland</div><h1>Inloggen</h1><label>E-mailadres<input id="email" type="email" autocomplete="email"></label><label>Wachtwoord<input id="password" type="text" autocomplete="off"></label><button id="loginBtn" class="primary">Inloggen</button><div id="loginMsg" class="muted"></div></div></div>
@@ -31,7 +31,7 @@
     <div class="formgrid"><label>Factuurnummer<input id="iNumber" class="readfield"></label><label>Klant<input id="iCustomer" class="readfield"></label><label>Datum<input id="iDate" type="date" class="readfield"></label><label>Omschrijving<input id="iDescription" class="readfield"></label><label>Totaal incl. btw<input id="iTotal" type="number" step="0.01" class="readfield"></label><label>Aanbetaling / betaald<input id="iPaid" type="number" step="0.01" class="readfield" value="0"></label><label>BTW bedrag<input id="iVat" type="number" step="0.01" class="readfield"></label></div>
     <button id="saveInvoiceBtn" class="primary">Factuur opslaan</button>
   </div>
-  <div class="tablewrap"><table><thead><tr><th>Factuur</th><th>Klant</th><th>Datum</th><th>Totaal</th><th>Betaald</th><th>Openstaand</th><th>BTW</th></tr></thead><tbody id="invoicesBody"></tbody></table></div>
+  <div class="tablewrap"><table><thead><tr><th>Factuur</th><th>Klant</th><th>Datum</th><th>Totaal</th><th>Betaald</th><th>Openstaand</th><th>BTW</th><th>Bestand</th></tr></thead><tbody id="invoicesBody"></tbody></table></div>
 </section>
 <section id="receipts" class="page">
   <div class="pagehead"><h1>Bonnen</h1><select id="receiptMonth"></select></div>
@@ -42,7 +42,7 @@
     <div class="formgrid"><label>Leverancier<input id="rSupplier" class="readfield"></label><label>Datum<input id="rDate" type="date" class="readfield"></label><label>Categorie<select id="rCategory" class="readfield"><option>Materialen</option><option>Gereedschap en machines</option><option>Kantoor</option><option>Overig</option></select></label><label>Totaal incl. btw<input id="rTotal" type="number" step="0.01" class="readfield"></label><label>BTW bedrag<input id="rVat" type="number" step="0.01" class="readfield"></label><label>Betaalwijze<select id="rMethod" class="readfield"><option>Bank</option><option>Pin</option><option>Contant</option><option>iDEAL</option></select></label></div>
     <button id="saveReceiptBtn" class="primary">Bon opslaan</button>
   </div>
-  <div class="tablewrap"><table><thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>Totaal</th><th>BTW</th></tr></thead><tbody id="receiptsBody"></tbody></table></div>
+  <div class="tablewrap"><table><thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>Totaal</th><th>BTW</th><th>Bestand</th></tr></thead><tbody id="receiptsBody"></tbody></table></div>
 </section>
 <section id="book" class="page"><h1>Boekhouding</h1><h2>Omzet per kwartaal</h2><div id="quarterCards" class="cards compact"></div><h2>BTW Q3</h2><div id="bookCards" class="cards compact"></div><div class="card"><div id="bookText"></div></div></section>
 </main>
@@ -63,11 +63,11 @@
   document.querySelectorAll('.bottomnav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
 })();
 </script>
-<script type="module" src="app.js?v=20260924-2055"></script>
-<script src="parser-v3.js?v=20260924-2055"></script>
-<script src="invoice-vat-fix.js?v=20260924-2055"></script>
-<script src="receipt-ocr-v2.js?v=20260924-2055"></script>
-<script src="receipt-amount-ocr-v3.js?v=20260924-2055"></script>
-<script type="module" src="details.js?v=20260924-2055"></script>
-<script type="module" src="payments.js?v=20260924-2055"></script>
+<script type="module" src="app.js?v=20260927-1305"></script>
+<script src="parser-v3.js?v=20260927-1305"></script>
+<script src="invoice-vat-fix.js?v=20260927-1305"></script>
+<script src="receipt-ocr-v2.js?v=20260927-1305"></script>
+<script src="receipt-amount-ocr-v3.js?v=20260927-1305"></script>
+<script type="module" src="details.js?v=20260927-1305"></script>
+<script type="module" src="payments.js?v=20260927-1305"></script>
 </body></html>
