@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="HDM Office">
   <title>HDM Office Next</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20260927-1305">
+  <link rel="stylesheet" href="styles.css?v=20260929-1535">
 </head>
 <body>
 <div id="login" class="login-shell"><div class="login-card"><div class="brand">HDM Office</div><div class="muted">hout.decoratie.middennederland</div><h1>Inloggen</h1><label>E-mailadres<input id="email" type="email" autocomplete="email"></label><label>Wachtwoord<input id="password" type="text" autocomplete="off"></label><button id="loginBtn" class="primary">Inloggen</button><div id="loginMsg" class="muted"></div></div></div>
@@ -44,9 +44,25 @@
   </div>
   <div class="tablewrap"><table><thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>Totaal</th><th>BTW</th><th>Bestand</th></tr></thead><tbody id="receiptsBody"></tbody></table></div>
 </section>
+<section id="mileage" class="page">
+  <div class="pagehead"><h1>Zakelijke kilometers</h1><select id="mileageMonth"><option value="">Alle maanden</option></select></div>
+  <div id="mileageCards" class="cards compact"></div>
+  <div class="editor mileage-editor">
+    <h2>Rit toevoegen</h2>
+    <div class="hint">Vul alleen de kilometers in die je zakelijk hebt gereden.</div>
+    <div class="formgrid mileage-form">
+      <label>Datum<input id="mDate" type="date" class="readfield"></label>
+      <label>Aantal kilometers<input id="mKm" type="number" min="0.1" step="0.1" inputmode="decimal" class="readfield" placeholder="Bijv. 42"></label>
+      <label class="mileage-description">Rit / omschrijving<input id="mDescription" class="readfield" placeholder="Bijv. Eemnes → klant Utrecht"></label>
+    </div>
+    <button id="saveMileageBtn" class="primary">Kilometers opslaan</button>
+  </div>
+  <h2>Rittenoverzicht</h2>
+  <div class="tablewrap mileage-table"><table><thead><tr><th>Datum</th><th>KM</th><th>Rit / omschrijving</th><th></th></tr></thead><tbody id="mileageBody"></tbody></table></div>
+</section>
 <section id="book" class="page"><h1>Boekhouding</h1><h2>Omzet per kwartaal</h2><div id="quarterCards" class="cards compact"></div><h2>BTW Q3</h2><div id="bookCards" class="cards compact"></div><div class="card"><div id="bookText"></div></div></section>
 </main>
-<nav class="bottomnav"><button data-page="home" class="active">🏠<span>Home</span></button><button data-page="customers">👥<span>Klanten</span></button><button data-page="invoices">📄<span>Facturen</span></button><button data-page="receipts">📷<span>Bonnen</span></button><button data-page="book">📊<span>Boekhouding</span></button></nav>
+<nav class="bottomnav"><button data-page="home" class="active">🏠<span>Home</span></button><button data-page="customers">👥<span>Klanten</span></button><button data-page="invoices">📄<span>Facturen</span></button><button data-page="receipts">📷<span>Bonnen</span></button><button data-page="mileage">🚗<span>KM</span></button><button data-page="book">📊<span>Boekhouding</span></button></nav>
 </div>
 <div id="detailModal" class="detail-modal" hidden><div class="detail-sheet"><div class="detail-head"><h2 id="detailTitle">Gegevens bewerken</h2><button id="detailClose" class="icon-btn" type="button">✕</button></div><div id="detailFields" class="formgrid"></div><div class="detail-actions"><button id="detailCancel" class="secondary" type="button">Annuleren</button><button id="detailSave" class="primary" type="button">Wijzigingen opslaan</button></div></div></div>
 <script>
@@ -63,11 +79,11 @@
   document.querySelectorAll('.bottomnav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
 })();
 </script>
-<script type="module" src="app.js?v=20260927-1305"></script>
-<script src="parser-v3.js?v=20260927-1305"></script>
-<script src="invoice-vat-fix.js?v=20260927-1305"></script>
-<script src="receipt-ocr-v2.js?v=20260927-1305"></script>
-<script src="receipt-amount-ocr-v3.js?v=20260927-1305"></script>
-<script type="module" src="details.js?v=20260927-1305"></script>
-<script type="module" src="payments.js?v=20260927-1305"></script>
+<script type="module" src="app.js?v=20260929-1535"></script>
+<script src="parser-v3.js?v=20260929-1535"></script>
+<script src="invoice-vat-fix.js?v=20260929-1535"></script>
+<script src="receipt-ocr-v2.js?v=20260929-1535"></script>
+<script src="receipt-amount-ocr-v3.js?v=20260929-1535"></script>
+<script type="module" src="details.js?v=20260929-1535"></script>
+<script type="module" src="payments.js?v=20260929-1535"></script>
 </body></html>
